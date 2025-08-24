@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>美味面馆 - 扫码点餐</title>
+    <!-- 引入GoEasy SDK -->
+    <script src="https://cdn.goeasy.io/goeasy-3.0.0.min.js"></script>
+    <style>
+        :root {
+            --primary: #ff7700;
+            --secondary: #333333;
+            --light: #f5f5f5;
+            --success: #28a745;
+            --danger: #dc3545;
+            --background: #fffdf5;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+        }
+        
+        body {
+            background-color: var(--background);
+            color: #333;
+            line-height: 1.6;
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        header {
+            text-align: center;
+            padding: 20px 0;
+            margin-bottom: 20px;
+            border-bottom: 2px dashed #ff7700;
+        }
+        
+        .restaurant-name {
+            color: var(--primary);
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+        }
+        
+        .slogan {
+            color: #666;
+            font-style: italic;
+        }
+        
+        .menu-container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+            overflow: hidden;
+            margin-bottom: 30px;
+        }
+        
+        .menu-header {
+            background: var(--primary);
+            color: white;
+            padding: 15px;
+            text-align: center;
+            font-size: 1.5rem;
+        }
+        
+        .menu-items {
+            padding: 20px;
+        }
+        
+        .menu-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 0;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .menu-item:last-child {
+            border-bottom: none;
+        }
+        
+        .item-info {
+            flex: 1;
+        }
+        
+        .item-name {
+            font-weight: bold;
+            font-size: 1.2rem;
+            margin-bottom: 5px;
+        }
+        
+        .item-price {
+            color: var(--primary);
+            fontWeight: bold;
+        }
+        
+        .item-controls {
+            display: flex;
+            align-items: center;
+        }
+        
+        .quantity-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            border: 1px solid #ddd;
+            background: white;
+            cursor: pointer;
+            font-size: 1.2rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .quantity-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .item-quantity {
+            margin: 0 12px;
+            font-weight: bold;
+            min-width: 20px;
+            text-align: center;
+        }
+        
+        .order-summary {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .summary-header {
+            text-align: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+            color: var(--primary);
+            font-size: 1.3rem;
+        }
+        
+        .summary-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+        
+        .total {
+            display: flex;
+            justify-content: space-between;
+            font-weight: bold;
+            font-size: 1.2rem;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 2px dashed #eee;
+        }
+        
+        .submit-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 16px 30px;
+            border-radius: 8px;
+            cursor: pointer;
+            width: 100%;
+            font-size: 1.2rem;
+            font-weight: bold;
+            transition: all 0.3s;
+            box-shadow: 0 4px 8px rgba(255, 119, 0, 0.2);
+        }
+        
+        .submit-btn:hover {
+            background: #ff5500;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(255, 119, 0, 0.3);
+        }
+        
+        .submit-btn:active {
+            transform: translateY(0);
+        }
+        
+        .submit-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .notification {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--success);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 8px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            opacity: 0;
+            transition: opacity 0.3s;
+            z-index: 1000;
+        }
+        
+        .notification.error {
+            background: var(--danger);
+        }
+        
+        .notification.show {
+            opacity: 1;
+        }
+        
+        .status-connected {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background-color: #4CAF50;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 3px;
+            font-size: 12px;
+            z-index: 1000;
+        }
+        
+        .status-disconnected {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background-color: #F44336;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 3px;
+            font-size: 12px;
+            z-index: 1000;
+        }
+        
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+            margin-right: 10px;
+            vertical-align: middle;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        @media (max-width: 600px) {
+            body {
+                padding: 10px;
+            }
+            
+            .restaurant-name {
+                font-size: 2rem;
+            }
+            
+            .menu-item {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .item-controls {
+                margin-top: 10px;
+                align-self: flex-end;
+            }
+            
+            .status-connected,
+            .status-disconnected {
+                top: 5px;
+                right: 5px;
+                font-size: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1 class="restaurant-name">美味面馆</h1>
+        <p class="slogan">传统手艺 · 家的味道</p>
+    </header>
+    
+    <div class="menu-container">
+        <div class="menu-header">今日菜单</div>
+        <div class="menu-items">
+            <div class="menu-item">
+                <div class="item-info">
+                    <div class="item-name">雪菜肉丝面</div>
+                    <div class="item-price">12元</div>
+                </div>
+                <div class="item-controls">
+                    <button class="quantity-btn minus" data-item="noodle1">-</button>
+                    <span class="item-quantity" data-item="noodle1">0</span>
+                    <button class="quantity-btn plus" data-item="noodle1">+</button>
+                </div>
+            </div>
+            
+            <div class="menu-item">
+                <div class="item-info">
+                    <div class="item-name">六鲜皮肚面</div>
+                    <div class="item-price">13元</div>
+                </div>
+                <div class="item-controls">
+                    <button class="quantity-btn minus" data-item="noodle2">-</button>
+                    <span class="item-quantity" data-item="noodle2">0</span>
+                    <button class="quantity-btn plus" data-item="noodle2">+</button>
+                </div>
+            </div>
+            
+            <div class="menu-item">
+                <div class="item-info">
+                    <div class="item-name">葱油拌面</div>
+                    <div class="item-price">8.8元</div>
+                </div>
+                <div class="item-controls">
+                    <button class="quantity-btn minus" data-item="noodle3">-</button>
+                    <span class="item-quantity" data-item="noodle3">0</span>
+                    <button class="quantity-btn plus" data-item="noodle3">+</button>
+                </div>
+            </div>
+            
+            <div class="menu-item">
+                <div class="item-info">
+                    <div class="item-name">南昌拌粉</div>
+                    <div class="item-price">8.8元</div>
+                </div>
+                <div class="item-controls">
+                    <button class="quantity-btn minus" data-item="noodle4">-</button>
+                    <span class="item-quantity" data-item="noodle4">0</span>
+                    <button class="quantity-btn plus" data-item="noodle4">+</button>
+                </div>
+            </div>
+            
+            <div class="menu-item">
+                <div class="item-info">
+                    <div class="item-name">煎蛋</div>
+                    <div class="item-price">2元</div>
+                </div>
+                <div class="item-controls">
+                    <button class="quantity-btn minus" data-item="egg">-</button>
+                    <span class="item-quantity" data-item="egg">0</span>
+                    <button class="quantity-btn plus" data-item="egg">+</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="order-summary">
+        <div class="summary-header">订单摘要</div>
+        <div id="order-items">
+            <div class="empty-order">请选择餐品</div>
+        </div>
+        <div class="total">
+            <span>总计:</span>
+            <span id="total-amount">0元</span>
+        </div>
+    </div>
+    
+    <button class="submit-btn" id="submit-btn">提交订单</button>
+    
+    <div class="notification" id="notification">订单已提交，正在打印小票...</div>
+
+    <script>
+        // 菜单数据
+        const menuItems = {
+            noodle1: { name: "雪菜肉丝面", price: 12 },
+            noodle2: { name: "六鲜皮肚面", price: 13 },
+            noodle3: { name: "葱油拌面", price: 8.8 },
+            noodle4: { name: "南昌拌粉", price: 8.8 },
+            egg: { name: "煎蛋", price: 2 }
+        };
+        
+        // 当前订单
+        let order = {
+            noodle1: 0,
+            noodle2: 0,
+            noodle3: 0,
+            noodle4: 0,
+            egg: 0
+        };
+        
+        // GoEasy实例
+        let goeasy = null;
+        let isConnected = false;
+        
+        // 初始化页面
+        document.addEventListener('DOMContentLoaded', function() {
+            // 添加加减按钮事件
+            document.querySelectorAll('.quantity-btn.plus').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const item = this.dataset.item;
+                    order[item]++;
+                    updateQuantityDisplay(item);
+                    updateOrderSummary();
+                });
+            });
+            
+            document.querySelectorAll('.quantity-btn.minus').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const item = this.dataset.item;
+                    if (order[item] > 0) {
+                        order[item]--;
+                        updateQuantityDisplay(item);
+                        updateOrderSummary();
+                    }
+                });
+            });
+            
+            // 提交订单事件
+            document.getElementById('submit-btn').addEventListener('click', function() {
+                const totalItems = Object.values(order).reduce((sum, qty) => sum + qty, 0);
+                
+                if (totalItems === 0) {
+                    showNotification('请至少选择一份餐品', 'error');
+                    return;
+                }
+                
+                // 构建订单数据
+                const orderData = {
+                    orderId: generateOrderId(),
+                    items: [],
+                    total: 0,
+                    timestamp: new Date().toISOString(),
+                    tableId: getTableNumber() || "未知桌号"
+                };
+                
+                // 添加订单项
+                for (const [item, quantity] of Object.entries(order)) {
+                    if (quantity > 0) {
+                        const itemData = {
+                            id: item,
+                            name: menuItems[item].name,
+                            price: menuItems[item].price,
+                            quantity: quantity
+                        };
+                        
+                        orderData.items.push(itemData);
+                        orderData.total += menuItems[item].price * quantity;
+                    }
+                }
+                
+                // 通过GoEasy发送订单
+                sendOrderViaGoEasy(orderData);
+            });
+            
+            // 初始化GoEasy连接
+            initGoEasy();
+        });
+        
+        // 初始化GoEasy连接
+        function initGoEasy() {
+            goeasy = new GoEasy({
+                host: 'hangzhou.goeasy.io',
+                appkey: 'PR-5862e95ee14f4b189587e068c3f6594e', // 使用新的AppKey
+                onConnected: function() {
+                    console.log('GoEasy连接成功！');
+                    isConnected = true;
+                    updateConnectionStatus(true);
+                },
+                onDisconnected: function() {
+                    console.log('GoEasy连接断开。');
+                    isConnected = false;
+                    updateConnectionStatus(false);
+                },
+                onConnectFailed: function(error) {
+                    console.error('GoEasy连接失败:', error);
+                    isConnected = false;
+                    updateConnectionStatus(false);
+                }
+            });
+        }
+        
+        // 通过GoEasy发送订单
+        function sendOrderViaGoEasy(orderData) {
+            if (!isConnected) {
+                showNotification('网络连接异常，请稍后重试', 'error');
+                return;
+            }
+            
+            // 禁用提交按钮，防止重复提交
+            const submitBtn = document.getElementById('submit-btn');
+            const originalText = submitBtn.textContent;
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="loading"></span>提交中...';
+            
+            // 使用GoEasy发送消息
+            goeasy.publish({
+                channel: 'restaurant_orders', // 频道名称，需要与Windows打印服务中的一致
+                message: JSON.stringify(orderData)
+            }).then(() => {
+                console.log('订单发送成功！');
+                showNotification('订单已发送至厨房，请等待制作！');
+                
+                // 清空订单
+                resetOrder();
+            }).catch((error) => {
+                console.error('订单发送失败:', error);
+                showNotification('发送订单失败，请检查网络后重试！', 'error');
+                
+                // 尝试使用REST API作为备选方案
+                sendOrderViaGoEasyRestApi(orderData);
+            }).finally(() => {
+                // 恢复提交按钮
+                submitBtn.disabled = false;
+                submitBtn.textContent = originalText;
+            });
+        }
+        
+        // 通过GoEasy REST API发送订单（备选方案）
+        function sendOrderViaGoEasyRestApi(orderData) {
+            const url = 'https://rest-goeasy.io/publish'; // GoEasy REST API地址
+            const payload = {
+                appkey: 'PR-5862e95ee14f4b189587e068c3f6594e', // 使用新的AppKey
+                channel: 'restaurant_orders',
+                content: JSON.stringify(orderData)
+            };
+            
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(payload)
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('REST API发送成功:', data);
+                showNotification('订单已通过备选方案发送！');
+                resetOrder();
+            })
+            .catch(error => {
+                console.error('REST API发送失败:', error);
+                showNotification('所有发送方式都失败了，请检查网络！', 'error');
+            });
+        }
+        
+        // 更新数量显示
+        function updateQuantityDisplay(item) {
+            const quantityElement = document.querySelector(`.item-quantity[data-item="${item}"]`);
+            quantityElement.textContent = order[item];
+            
+            // 禁用或启用减号按钮
+            const minusBtn = document.querySelector(`.quantity-btn.minus[data-item="${item}"]`);
+            minusBtn.disabled = order[item] === 0;
+        }
+        
+        // 更新订单摘要
+        function updateOrderSummary() {
+            const orderItemsContainer = document.getElementById('order-items');
+            const totalElement = document.getElementById('total-amount');
+            
+            // 计算总金额
+            let total = 0;
+            let hasItems = false;
+            
+            // 清空订单摘要
+            orderItemsContainer.innerHTML = '';
+            
+            // 添加每个菜品
+            for (const [item, quantity] of Object.entries(order)) {
+                if (quantity > 0) {
+                    hasItems = true;
+                    const itemTotal = menuItems[item].price * quantity;
+                    total += itemTotal;
+                    
+                    const itemElement = document.createElement('div');
+                    itemElement.className = 'summary-item';
+                    itemElement.innerHTML = `
+                        <span>${menuItems[item].name} x${quantity}</span>
+                        <span>${itemTotal.toFixed(2)}元</span>
+                    `;
+                    orderItemsContainer.appendChild(itemElement);
+                }
+            }
+            
+            // 如果没有菜品，显示提示
+            if (!hasItems) {
+                orderItemsContainer.innerHTML = '<div class="empty-order">请选择餐品</div>';
+            }
+            
+            // 更新总金额
+            totalElement.textContent = `${total.toFixed(2)}元`;
+        }
+        
+        // 显示通知
+        function showNotification(message, type = 'success') {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.className = 'notification';
+            
+            if (type === 'error') {
+                notification.classList.add('error');
+            }
+            
+            notification.classList.add('show');
+            
+            // 3秒后隐藏通知
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
+        
+        // 更新连接状态显示
+        function updateConnectionStatus(connected) {
+            // 移除现有的状态元素
+            const existingStatus = document.getElementById('connection-status');
+            if (existingStatus) {
+                existingStatus.remove();
+            }
+            
+            // 创建新的状态元素
+            const statusElement = document.createElement('div');
+            statusElement.id = 'connection-status';
+            
+            if (connected) {
+                statusElement.textContent = '已连接到服务器';
+                statusElement.className = 'status-connected';
+            } else {
+                statusElement.textContent = '未连接到服务器';
+                statusElement.className = 'status-disconnected';
+            }
+            
+            document.body.appendChild(statusElement);
+        }
+        
+        // 生成订单ID
+        function generateOrderId() {
+            const now = new Date();
+            return `ORD${now.getFullYear()}${(now.getMonth()+1).toString().padStart(2, '0')}${now.getDate().toString().padStart(2, '0')}${now.getHours().toString().padStart(2, '0')}${now.getMinutes().toString().padStart(2, '0')}${now.getSeconds().toString().padStart(2, '0')}`;
+        }
+        
+        // 从URL获取桌号信息
+        function getTableNumber() {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get('table') || urlParams.get('桌号') || 'A1';
+        }
+        
+        // 清空订单
+        function resetOrder() {
+            for (const item in order) {
+                order[item] = 0;
+                updateQuantityDisplay(item);
+            }
+            updateOrderSummary();
+        }
+    </script>
+</body>
+</html>
